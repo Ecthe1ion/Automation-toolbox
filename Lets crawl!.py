@@ -77,7 +77,10 @@ def extract_information_from_pdf(pdf_path):
                 
 
                 announcement_date = announcement_date_match[-1]
-                announcement_date = convert_chinese_date(re.sub(r'\s+', '', announcement_date))
+                try:
+                    announcement_date = convert_chinese_date(re.sub(r'\s+', '', announcement_date))
+                except:
+                    announcement_date = re.sub(r'\s+', '', announcement_date)
                 extracted_data.append({ '落款日期': announcement_date})
 
     return extracted_data
