@@ -2,6 +2,8 @@ import pdfplumber
 import re
 import requests
 from io import BytesIO
+import tablib
+
 
 def convert_chinese_date(chinese_date):
     # 汉字数字与对应的阿拉伯数字的映射
@@ -42,6 +44,8 @@ def extract_information_from_pdf(pdf_path):
         # 创建一个空的列表用于存储信息
         extracted_data = []
 
+        retry_indicator = 0
+
         for page_number in range(total_pages):
             page = pdf.pages[page_number]
 
@@ -49,27 +53,48 @@ def extract_information_from_pdf(pdf_path):
             text = page.extract_text()
 
             if page_number == 0:
-                underlying_security = re.search(r'证券简称：\s*([\u4e00-\u9fa5]{1,4})\s', text).group(1)
+                underlying_security = re.search(r'证券简称：\s*([*ST]*\s*[\u4e00-\u9fa5]{1,4})\s', text).group(1)
                 underlying_security = re.sub(r'\s+', '', underlying_security)
                 extracted_data.append({ '证券简称': underlying_security})
                 if re.search(r'不向下', text):            
                     extracted_data.append({ '公告类型': str('不向下修正')})
                     # 使用正则表达式提取日期
-                    CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*重新起算)', text).group(1)
-                    # 使用正则表达式去除所有空格
-                    CD = re.sub(r'\s+', '', CD)  # 替换所有空格为无
-                    # 将提取的信息添加到列表中
-                    extracted_data.append({ '重启日期': CD})
+                    try:
+                        CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*[）起]*重新[起计]*算)', text).group(1)
+                    except:
+                        if re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*开始重新起算)', text):
+                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*开始重新起算)', text).group(1)
+                        elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起首个交易日重新开始计算)', text):
+                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起首个交易日重新开始计算)', text).group(1)
+                        else:
+                            retry_indicator = 1
+                    if retry_indicator == 0:
+                        # 使用正则表达式去除所有空格
+                        CD = re.sub(r'\s+', '', CD)  # 替换所有空格为无
+                        # 将提取的信息添加到列表中
+                        extracted_data.append({ '重启日期': CD})
                 elif re.search(r'预计', text):
                     extracted_data.append({ '公告类型': str('预计向下修正')})
                 elif re.search(r'提议', text):
                     extracted_data.append({ '公告类型': str('提议向下修正')})
+                elif re.search(r'可能触发', text):
+                    extracted_data.append({ '公告类型': str('可能触发提示')})
                 elif re.search(r'关于向下', text):
                     extracted_data.append({ '公告类型': str('向下修正')})
                 else:
                     extracted_data.append({ '公告类型': str('未知')})
 
             if page_number+1 == total_pages:
+
+                if retry_indicator == 1:
+                    if re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*开始重新起算)', text):
+                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*开始重新起算)', text).group(1)
+                    elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起首个交易日重新开始计算)', text):
+                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起首个交易日重新开始计算)', text).group(1)
+                    CD = re.sub(r'\s+', '', CD)
+                    extracted_data.append({ '重启日期': CD})
+
+
                 if re.findall(r'([一二三四五六七八九十〇零]+年[一二三四五六七八九十〇]+月[一二三四五六七八九十〇]+日)', \
                 text,re.MULTILINE):
                     announcement_date_match = re.findall(r'([一二三四五六七八九十〇零]+年[一二三四五六七八九十〇]+月[一二三四五六七八九十〇]+日)', \
@@ -84,13 +109,29 @@ def extract_information_from_pdf(pdf_path):
                 except:
                     announcement_date = re.sub(r'\s+', '', announcement_date)
                 extracted_data.append({ '落款日期': announcement_date})
-
     return extracted_data
 
+
 # 指定PDF文件路径
-pdf_file_path = "https://pdf.dfcfw.com/pdf/H2_AN202411041640705965_1.pdf"
+# pdf_file_path = "https://pdf.dfcfw.com/pdf/H2_AN202410231640442859_1.pdf"
+data = tablib.Dataset()
+with open('D:/0.xlsx', 'rb') as fh:
+    data.load(fh, 'xlsx')
+
+del data['公告主题']
+del data['发布时间']
+
+# #记得在excel中手动清理多余行（让表格以外的行保持默认状态）
+for Hyperlink in data['附件']:
+    pdf_file_path = Hyperlink
+    result = extract_information_from_pdf(pdf_file_path)
+    for entry in result:
+        print(entry)
+
+# with open('整理结果.xlsx', 'wb') as f:
+#     f.write(data.export('xlsx'))
 
 # 提取信息并打印
-result = extract_information_from_pdf(pdf_file_path)
-for entry in result:
-    print(entry)
+# result = extract_information_from_pdf(pdf_file_path)
+# for entry in result:
+#     print(entry)
