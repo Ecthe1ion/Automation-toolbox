@@ -10,7 +10,7 @@ def convert_chinese_date(chinese_date):
     chinese_to_digit = {
         '零': '0', '一': '1', '二': '2', '三': '3', '四': '4',
         '五': '5', '六': '6', '七': '7', '八': '8', '九': '9',
-        '十': '1', '〇':'0'
+        '十': '10', '〇':'0'
     }
 
     # 提取年份、月份和日期
@@ -35,7 +35,13 @@ def convert_chinese_date(chinese_date):
         if char in chinese_to_digit:
             day += chinese_to_digit[char]
 
-    return f"{year}年{month}月{day}日"
+    # 处理“十”字的特殊情况
+    if len(month) >= 3:
+        month = month[0] + month[-1]
+    if len(day) >= 3:
+        day = day[0] + day[-1]
+
+    return f"{year}/{month}/{day}"
 
 def extract_information_from_pdf(pdf_path):
     with pdfplumber.open(BytesIO(requests.get(pdf_path).content)) as pdf:
@@ -58,8 +64,10 @@ def extract_information_from_pdf(pdf_path):
                 except:
                     if re.search(r'股票简称[：:]\s*([\*ST\s]*[\u4e00-\u9fa5]{1,4})\s', text):
                         underlying_security = re.search(r'股票简称[：:]\s*([\*ST\s]*[\u4e00-\u9fa5]{1,4})\s', text).group(1)
-                    else:
+                    elif re.search(r'公司简称[：:]\s*([\*ST\s]*[\u4e00-\u9fa5]{1,4})\s', text):
                         underlying_security = re.search(r'公司简称[：:]\s*([\*ST\s]*[\u4e00-\u9fa5]{1,4})\s', text).group(1)
+                    else:
+                        underlying_security = str('异常情况')
                 underlying_security = re.sub(r'\s+', '', underlying_security)
                 extracted_data.append({ '证券简称': underlying_security})
                 if re.search(r'预计', text):
@@ -77,15 +85,17 @@ def extract_information_from_pdf(pdf_path):
                             CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起首个交易日重新开始计算)', text).group(1)
                         elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起计算)', text):
                             CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起计算)', text).group(1)
-                        elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*[为首日开始重新计算之后\s起首个交易日]*，若再次触发)', text):
-                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*[为首日开始重新计算之后\s起首个交易日]*，若再次触发)', text).group(1)
+                        elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[为首日开始重新计算之后\s起首个交易日），]*[若如]*再次触发)', text):
+                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[为首日开始重新计算之后\s起首个交易日），]*[若如]*再次触发)', text).group(1)
+                        elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[重从新\s]*起算)', text):
+                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[重从新\s]*起算)', text).group(1)
                         else:
                             retry_indicator = 1
                     if retry_indicator == 0:
                         # 使用正则表达式去除所有空格
                         CD = re.sub(r'\s+', '', CD)  # 替换所有空格为无
                         # 将提取的信息添加到列表中
-                        extracted_data.append({ '重启日期': CD})
+                        extracted_data.append({ '重启日期': CD.replace('年','/').replace('月','/').replace('日','')})
                 elif re.search(r'提议', text):
                     extracted_data.append({ '公告类型': str('提议向下修正')})
                     extracted_data.append({ '重启日期': None})
@@ -110,13 +120,15 @@ def extract_information_from_pdf(pdf_path):
                             CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起首个交易日重新开始计算)', text).group(1)
                         elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起计算)', text):
                             CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起计算)', text).group(1)
-                        elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*[为首日开始重新计算之后\s起首个交易日]*，若再次触发)', text):
-                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*[为首日开始重新计算之后\s起首个交易日]*，若再次触发)', text).group(1)
+                        elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[为首日开始重新计算之后\s起首个交易日），]*[若如]*再次触发)', text):
+                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[为首日开始重新计算之后\s起首个交易日），]*[若如]*再次触发)', text).group(1)
+                        elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[重从新\s]*起算)', text):
+                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[重从新\s]*起算)', text).group(1)
                         else:
                             retry_indicator = 2
                 if retry_indicator == 1:
                     CD = re.sub(r'\s+', '', CD)
-                    extracted_data.append({ '重启日期': CD})
+                    extracted_data.append({ '重启日期': CD.replace('年','/').replace('月','/').replace('日','')})
 
             if page_number+1 == total_pages:
 
@@ -130,13 +142,14 @@ def extract_information_from_pdf(pdf_path):
                             CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起首个交易日重新开始计算)', text).group(1)
                         elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起计算)', text):
                             CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*起计算)', text).group(1)
-                        elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*[为首日开始重新计算之后\s起首个交易日]*，若再次触发)', text):
-                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*[为首日开始重新计算之后\s起首个交易日]*，若再次触发)', text).group(1)
+                        elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[为首日开始重新计算之后\s起首个交易日），]*[若如]*再次触发)', text):
+                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[为首日开始重新计算之后\s起首个交易日），]*[若如]*再次触发)', text).group(1)
+                        elif re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[重从新\s]*起算)', text):
+                            CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=[重从新\s]*起算)', text).group(1)
                         else:
                             CD = str('异常情况，请手动查看')
                     CD = re.sub(r'\s+', '', CD)
-                    extracted_data.append({ '重启日期': CD})
-
+                    extracted_data.append({ '重启日期': CD.replace('年','/').replace('月','/').replace('日','')})
 
                 if re.findall(r'([一二三四五六七八九十〇零]+年[一二三四五六七八九十〇]+月[一二三四五六七八九十〇]+日)', \
                 text,re.MULTILINE):
@@ -145,19 +158,21 @@ def extract_information_from_pdf(pdf_path):
                 elif re.findall( r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)', text, re.MULTILINE):
                     announcement_date_match = re.findall( r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)', text, re.MULTILINE)
                 
-
-                announcement_date = announcement_date_match[-1]
                 try:
-                    announcement_date = convert_chinese_date(re.sub(r'\s+', '', announcement_date))
+                    announcement_date = announcement_date_match[-1]
+                    try:
+                        announcement_date = convert_chinese_date(re.sub(r'\s+', '', announcement_date))
+                    except:
+                        announcement_date = re.sub(r'\s+', '', announcement_date)
+                    extracted_data.append({ '落款日期': announcement_date.replace('年','/').replace('月','/').replace('日','')})
                 except:
-                    announcement_date = re.sub(r'\s+', '', announcement_date)
-                extracted_data.append({ '落款日期': announcement_date})
+                    extracted_data.append({ '落款日期': str('异常情况')})
     return extracted_data
 
 
 # 指定PDF文件路径
 data = tablib.Dataset()
-with open('D:/0.xlsx', 'rb') as fh:
+with open('D:/合并前4138项.xlsx', 'rb') as fh:
     data.load(fh, 'xlsx')
 
 del data['公告主题']
