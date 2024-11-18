@@ -70,12 +70,19 @@ def extract_information_from_pdf(pdf_path):
                         underlying_security = str('异常情况')
                 underlying_security = re.sub(r'\s+', '', underlying_security)
                 extracted_data.append({ '证券简称': underlying_security})
+
+                try:
+                    ID = re.search(r'[转]*债[券]*代码[：:]\s*(\d{6})\s', text).group(1)
+                except:
+                    ID = str('异常情况')
+                extracted_data.append({ '债券代码': ID})
+
                 if re.search(r'预计', text):
                     extracted_data.append({ '公告类型': str('预计向下修正')})
                     extracted_data.append({ '重启日期': None})
                 elif re.search(r'不向下', text):            
                     extracted_data.append({ '公告类型': str('不向下修正')})
-                    # 使用正则表达式提取日期
+                #     # 使用正则表达式提取日期
                     try:
                         CD = re.search(r'(\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)(?=\s*[）起]*[（如遇法定节假日或休息日延至其后的第 1 个交易日）]*重新[起计]*算)', text).group(1)
                     except:
@@ -178,7 +185,7 @@ with open('D:/合并前4138项.xlsx', 'rb') as fh:
 del data['公告主题']
 del data['发布时间']
 updated_data = tablib.Dataset()
-updated_data.headers = ['证券简称', '公告类型','重启日期','落款日期']
+updated_data.headers = ['证券简称','债券代码','公告类型','重启日期','落款日期']
 
 # # #记得在excel中手动清理多余行（让表格以外的行保持默认状态）
 for Hyperlink in data['附件']:
