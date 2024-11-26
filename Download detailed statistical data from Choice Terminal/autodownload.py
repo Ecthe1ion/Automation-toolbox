@@ -98,9 +98,9 @@ for ticker in mylist:
     click(94,611)
 
     # 修改日期区间
-    sleep(1.5)
+    sleep(1)
     click(443,209)
-    sleep(1.5)
+    sleep(1)
     click(406,273,5)
     click(404,409)
     sleep(1)
@@ -110,10 +110,11 @@ for ticker in mylist:
     click(1065,400)
 
     # 下载文件
-    sleep(0.7)
+    sleep(1.5)
     click(2060,202)
     click(1325,815)
-    sleep(0.7)
+    sleep(1)
 
     # 关闭第二个窗口
     click(426,103,2,0.3)
+    sleep(0.5)
