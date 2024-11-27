@@ -23,60 +23,61 @@ TS2409
 TS2412
 TS2503
 TS2506
-TF2003
-TF2006
-TF2009
-TF2012
-TF2103
-TF2106
-TF2109
-TF2112
-TF2203
-TF2206
-TF2209
-TF2212
-TF2303
-TF2306
-TF2309
-TF2312
-TF2403
-TF2406
-TF2409
-TF2412
-TF2503
-TF2506
-T2003
-T2006
-T2009
-T2012
-T2103
-T2106
-T2109
-T2112
-T2203
-T2206
-T2209
-T2212
-T2303
-T2306
-T2309
-T2312
-T2403
-T2406
-T2409
-T2412
-T2503
-T2506
-TL2306
-TL2309
-TL2312
-TL2403
-TL2406
-TL2409
-TL2412
-TL2503
-TL2506
 """
+# TF2003
+# TF2006
+# TF2009
+# TF2012
+# TF2103
+# TF2106
+# TF2109
+# TF2112
+# TF2203
+# TF2206
+# TF2209
+# TF2212
+# TF2303
+# TF2306
+# TF2309
+# TF2312
+# TF2403
+# TF2406
+# TF2409
+# TF2412
+# TF2503
+# TF2506
+# T2003
+# T2006
+# T2009
+# T2012
+# T2103
+# T2106
+# T2109
+# T2112
+# T2203
+# T2206
+# T2209
+# T2212
+# T2303
+# T2306
+# T2309
+# T2312
+# T2403
+# T2406
+# T2409
+# T2412
+# T2503
+# T2506
+# TL2306
+# TL2309
+# TL2312
+# TL2403
+# TL2406
+# TL2409
+# TL2412
+# TL2503
+# TL2506
+# """
 mylist = [line.strip() for line in tickerlist.strip().split('\n')]
 
 summary = tablib.Dataset()
@@ -98,13 +99,17 @@ for ID in mylist:
                 del data[entry]
 
             for row in data.dict:
-                if ID[-1] != '3':
-                    if (row['日期'] > '20'+ID[-4:-2]+'-'+str(int(ID[-2:])-4)+'-16') \
-                    & (row['日期'] < '20'+ID[-4:-2]+'-'+str(int(ID[-2:])-1)+'-15'):
+                if (ID[-1] == '6') or (ID[-1] == '9'):
+                    if (row['日期'] > '20'+ID[-4:-2]+'-0'+str(int(ID[-2:])-4)+'-16') \
+                    & (row['日期'] < '20'+ID[-4:-2]+'-0'+str(int(ID[-2:])-1)+'-15'):
                         summary.append(row.values())
-                else:
+                elif ID[-1] == '3':
                     if (row['日期'] > '20'+str(int(ID[-4:-2])-1)+'-11-16') \
                     & (row['日期'] < '20'+ID[-4:-2]+'-02-15'):
+                        summary.append(row.values())
+                elif ID[-1] == '2':
+                    if (row['日期'] > '20'+ID[-4:-2]+'-08-16') \
+                    & (row['日期'] < '20'+ID[-4:-2]+'-11-15'):
                         summary.append(row.values())
         except:
             pass
