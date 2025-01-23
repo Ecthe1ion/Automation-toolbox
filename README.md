@@ -1,8 +1,6 @@
-目前本项目包含“Download detailed statistical data from Choice Terminal”和“Extract certain keywords from PDF documents online”两个子项目。
+在对金融数据进行处理时，常遇到金融数据软件导出功能不够智能的情况，因此在Automation-toolbox中收录自己写的一些改进效率的程序。目前，本项目共包含“Download detailed statistical data from Choice Terminal”和“Extract certain keywords from PDF documents online”两个子项目。
 
-在使用Choice终端收集数据时，某些情况下会出现目标数据不存在批量导出的选项。
-“Download detailed statistical data from Choice Terminal”的脚本通过模拟鼠标点击指定位置与模拟键盘输入的方式代替人力搜索并下载表格。
-然后通过调用tablib对所需大量xlsx文件中的信息进行整合。
+在使用Choice终端收集数据时，某些情况下会出现目标数据不存在批量导出的选项。“Download detailed statistical data from Choice Terminal”的脚本通过模拟鼠标点击指定位置与模拟键盘输入的方式代替人力搜索并下载表格，然后通过调用tablib对所需大量xlsx文件中的信息进行整合。适用于只能在标的资产的深度资料中下载xlsx导出的数据。
 
 “Extract certain keywords from PDF documents online”的脚本（Lets crawl!.py）通过调用pdfplumber和request按照给定xlsx文件中的链接列读取在线pdf文件，
 再使用re正则表达式对查找内容进行匹配，一般适用于存在固定格式的公告文件，最后调用tablib创建表格存取所需信息并输出至新创建的xlsx文件中。
